@@ -22,12 +22,13 @@ the fan-out. Its ``after_agent_callback`` renders the HTML app.
 
 from google.adk.agents import Agent
 
+from app.domain import get_domain
 from app.models import build_model
 from app.render import assemble_html_callback
 from app.schemas import ReviewQueue
 
 RANK_INSTRUCTION = """\
-You are the editor of a computational-biology paper review tailored to one
+You are the editor of a __DOMAIN_ADJ__ paper review tailored to one
 researcher.
 
 Researcher profile and scope (JSON):
@@ -68,9 +69,9 @@ For the `insights` field you MUST use these four inline labels VERBATIM and in
 this order, each followed by a short phrase, all in one string:
 "New metric: <...> New eval data: <...> Design & novelty: <...> Eval limits: <...>"
 
-Fill `tags.app` with the biological-problem tags and `tags.method` with the
-computational-class tags. Fill `approach` with {{algo, nov, aim, data, model,
-bio}} where `aim` is "<goal>. Limitation addressed: <gap>." Put code/data URLs
+Fill `tags.app` with application/problem tags and `tags.method` with the
+method/technique-class tags. Fill `approach` with {{algo, nov, aim, data, model,
+question}} where `aim` is "<goal>. Limitation addressed: <gap>." Put code/data URLs
 (space-separated, bare) in `resources`. Write `relevance` as why it matters to
 THIS researcher, and `comments` as your significance note.
 
@@ -82,7 +83,7 @@ rank_agent = Agent(
     name="rank_agent",
     model=build_model(),
     description="Merges, deepens, and ranks candidate papers into the final ReviewQueue.",
-    instruction=RANK_INSTRUCTION,
+    instruction=RANK_INSTRUCTION.replace("__DOMAIN_ADJ__", get_domain().adjective),
     output_schema=ReviewQueue,
     output_key="review_queue",
     after_agent_callback=assemble_html_callback,

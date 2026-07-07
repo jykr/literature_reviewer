@@ -55,6 +55,17 @@ uv run uvicorn app.fast_api_app:app --host 0.0.0.0 --port 8080
 
 On Cloud Run the credentials come from the service account automatically. `agents-cli deploy` (from the [Agents CLI](https://github.com/google/agents-cli): `uv tool install google-agents-cli`) builds the same container and ships it to **Google Cloud Run**. Infrastructure is Terraform under [`deployment/terraform/`](deployment/terraform/). See [`compbio-paper-review-SPEC.md`](compbio-paper-review-SPEC.md) for the full specification of the generated review app.
 
+## Domain-agnostic by design
+
+Computational biology is the **default demo**, not a hard-coded limit. The
+pipeline is field-agnostic — scope, search, and ranking all derive from your own
+CV/keywords, and the only search filter is a publication date. The field-specific
+*framing* (prompts, page title, the per-paper "domain question" label, the
+`localStorage` namespace) lives in one config knob, [`app/domain.py`](app/domain.py),
+mirroring `REVIEW_MODEL`. Retarget the app by setting `REVIEW_DOMAIN_NAME` (and
+usually `REVIEW_DOMAIN_QUESTION_LABEL`) in `.env` — e.g. `Materials Science`,
+`Macroeconomics`, `Climate Science`. Leave them unset for the compbio demo.
+
 ## Model-agnostic by design
 
 Model choice is a **config knob** (`REVIEW_MODEL`), never chat input. A bare Gemini id runs ADK-native; a LiteLLM `provider/model` id (e.g. `anthropic/claude-sonnet-5`, `openai/gpt-4o`) routes through LiteLLM. The hosted BYO-key server supports Gemini, Anthropic, and OpenAI behind one `call_llm`, with loose/repairing JSON parsing so a truncated or fenced response still yields a valid review. Because search runs on keyless tools rather than provider-specific grounding, swapping models changes nothing downstream.

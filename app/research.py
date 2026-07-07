@@ -37,6 +37,7 @@ import json
 from google.adk.agents import Agent, ParallelAgent
 from google.adk.agents.callback_context import CallbackContext
 
+from app.domain import get_domain
 from app.models import build_model, safety_config
 from app.search_tools import SCHOLARLY_TOOLS
 
@@ -59,7 +60,7 @@ def split_clusters(callback_context: CallbackContext) -> None:
 
 
 RESEARCH_INSTRUCTION = """\
-You research recent computational-biology papers for ONE subfield cluster.
+You research recent __DOMAIN_ADJ__ papers for ONE subfield cluster.
 
 The cluster to research (JSON, may be empty) is:
 {cluster_%d}
@@ -71,7 +72,7 @@ published from mid-2025 to now (max ~1 year old). Use the search tools:
 - `search_openalex(query, from_date, max_results)` — your PRIMARY source; broad
   coverage plus citation metrics. Pass from_date="2025-06-01".
 - `search_europepmc(query, max_results)` — biomedical papers and preprints.
-- `search_arxiv(query, max_results)` — q-bio / CS preprints.
+- `search_arxiv(query, max_results)` — preprints (e.g. q-bio, cs, physics, math).
 Issue a few focused queries combining the cluster keywords; call more than one
 tool when useful. Prefer papers with a resolvable DOI or preprint URL, and carry
 `cited_by_count`/`fwci` from OpenAlex when present (used later for ranking).
@@ -94,7 +95,7 @@ Output ONLY a JSON array (no prose, no code fences). Each element:
   "data": "what data it uses (train + eval, scale)",
   "model": "how the method works / how it was adapted",
   "evaluation": "how it was evaluated: metrics, eval data, design novelty, limits",
-  "bio_question": "the biological question it answers",
+  "question": "__DOMAIN_QUESTION_HINT__",
   "app_tags": ["Application tag", "..."],
   "method_tags": ["Method/computational-class tag", "..."]
 }
@@ -103,11 +104,16 @@ Output ONLY a JSON array (no prose, no code fences). Each element:
 
 def create_researcher(k: int) -> Agent:
     """Factory for researcher slot k (call it, don't pass the reference)."""
+    d = get_domain()
+    instruction = (
+        RESEARCH_INSTRUCTION.replace("__DOMAIN_ADJ__", d.adjective)
+        .replace("__DOMAIN_QUESTION_HINT__", d.question_hint)
+    )
     return Agent(
         name=f"researcher_{k}",
         model=build_model(),
         description=f"Searches for recent papers in subfield cluster {k}.",
-        instruction=RESEARCH_INSTRUCTION % k,
+        instruction=instruction % k,
         tools=SCHOLARLY_TOOLS,
         output_key=f"papers_{k}",
         generate_content_config=safety_config(),

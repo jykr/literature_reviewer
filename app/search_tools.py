@@ -34,7 +34,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 _TIMEOUT = 20
-_UA = "literature-reviewer/0.1 (compbio paper review agent)"
+_UA = "literature-reviewer/0.1 (paper review agent)"
 
 
 def _get(url: str) -> bytes:

@@ -30,17 +30,20 @@ from google.adk.runners import Runner
 from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 
-from app import byo_review
+# Load .env BEFORE importing app modules: several resolve config (REVIEW_MODEL,
+# REVIEW_DOMAIN_*) at import time, so the environment must be populated first.
+load_dotenv()
 
-from app.app_utils import services
-from app.app_utils.a2a import attach_a2a_routes
-from app.app_utils.reasoning_engine_adapter import (
+from app import byo_review  # noqa: E402
+
+from app.app_utils import services  # noqa: E402
+from app.app_utils.a2a import attach_a2a_routes  # noqa: E402
+from app.app_utils.reasoning_engine_adapter import (  # noqa: E402
     attach_reasoning_engine_routes,
 )
-from app.app_utils.telemetry import setup_telemetry
-from app.app_utils.typing import Feedback
+from app.app_utils.telemetry import setup_telemetry  # noqa: E402
+from app.app_utils.typing import Feedback  # noqa: E402
 
-load_dotenv()
 # Sets the OTel providers/resource; must run before get_fast_api_app.
 setup_telemetry()
 _, project_id = google.auth.default()

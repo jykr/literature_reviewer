@@ -40,6 +40,7 @@ from collections.abc import Callable
 from types import SimpleNamespace as NS
 
 from app import search_tools
+from app.domain import get_domain
 from app.render import build_payload, categories_from_scope
 
 logger = logging.getLogger(__name__)
@@ -197,13 +198,13 @@ def _json_loads_loose(text: str):
 # =========================================================================
 _INPUT_LABELS = {"cv": "CV / profile", "paper": "Paper", "keyword": "Research topic/keyword"}
 
-SCOPE_SYS = """You define the research scope for a computational-biology paper review tailored to one researcher.
+SCOPE_SYS = """You define the research scope for a __DOMAIN_ADJ__ paper review tailored to one researcher.
 Given the user's interests (CV/site text, papers, and/or free-text topics), produce UP TO 5 distinct subfield
 clusters (minimise overlap), each with 3-8 concrete search keywords.
 Output ONLY this JSON object: {"profile":"2-4 sentences: subfields, methods, seniority","clusters":[{"name":"short label","keywords":["kw1","kw2"]}]}
 If there is no usable input at all, output {"profile":"","clusters":[]}."""
 
-RANK_SYS = """You are the editor of a computational-biology paper review tailored to one researcher.
+RANK_SYS = """You are the editor of a __DOMAIN_ADJ__ paper review tailored to one researcher.
 You receive the researcher scope (JSON) and candidate papers (JSON arrays, one per cluster; some may be empty).
 Do this:
 1. MERGE all candidates and DEDUPLICATE (same title or URL). Drop anything off-topic or unverifiable.
@@ -219,7 +220,7 @@ Output ONLY JSON: {"papers":[{
  "insights":str,"results":[str],"limitation":str,"resources":str,"comments":str,"relevance":str,
  "impact":int(1-10),"rel":int(1-10),"cats":[int],
  "tags":{"app":[str],"method":[str]},
- "approach":{"algo":str,"nov":int(0-100),"aim":str,"data":str,"model":str,"bio":str}}]}
+ "approach":{"algo":str,"nov":int(0-100),"aim":str,"data":str,"model":str,"question":str}}]}
 Only use papers actually present in the candidates; do NOT invent titles/authors/URLs."""
 
 
@@ -271,9 +272,15 @@ def run_pipeline(
         raise ValueError("Provide at least one interest.")
     user_msg = "Researcher interests:\n" + "\n".join(lines)
 
+    # Domain framing is config (app/domain.py), resolved here at request time so a
+    # late load_dotenv() still applies.
+    adj = get_domain().adjective
+    scope_sys = SCOPE_SYS.replace("__DOMAIN_ADJ__", adj)
+    rank_sys = RANK_SYS.replace("__DOMAIN_ADJ__", adj)
+
     # ---- stage 1: scope ----
     stage("scope", "Analyzing your interests…")
-    scope = _json_loads_loose(call_llm(provider, model, api_key, SCOPE_SYS, user_msg))
+    scope = _json_loads_loose(call_llm(provider, model, api_key, scope_sys, user_msg))
     clusters = scope.get("clusters") or []
     if not clusters:
         raise ValueError("No usable scope from the given inputs; add a CV URL or research topics.")
@@ -300,7 +307,7 @@ def run_pipeline(
         "Scope:\n" + json.dumps(scope, ensure_ascii=False)
         + "\n\nCandidates by cluster index:\n" + json.dumps(candidates, ensure_ascii=False)
     )
-    ranked = _json_loads_loose(call_llm(provider, model, api_key, RANK_SYS, rank_user))
+    ranked = _json_loads_loose(call_llm(provider, model, api_key, rank_sys, rank_user))
     papers = ranked.get("papers") or []
     logger.info("%s done: %d ranked papers", tag, len(papers))
 
@@ -308,10 +315,10 @@ def run_pipeline(
     def obj(p):
         d = dict(p)
         d.setdefault("tags", {"app": [], "method": []})
-        d.setdefault("approach", {"algo": "", "nov": 0, "aim": "", "data": "", "model": "", "bio": ""})
+        d.setdefault("approach", {"algo": "", "nov": 0, "aim": "", "data": "", "model": "", "question": ""})
         d["tags"] = NS(**{"app": [], "method": [], **d["tags"]})
         d["approach"] = NS(
-            **{"algo": "", "nov": 0, "aim": "", "data": "", "model": "", "bio": "", **d["approach"]}
+            **{"algo": "", "nov": 0, "aim": "", "data": "", "model": "", "question": "", **d["approach"]}
         )
         d.setdefault("cats", [])
         d.setdefault("results", [])

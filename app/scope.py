@@ -26,11 +26,12 @@ has no tools) is where we enforce a real ``output_schema``.
 from google.adk.agents import Agent
 from google.adk.tools.load_web_page import load_web_page
 
+from app.domain import get_domain
 from app.models import build_model, safety_config
 from app.security import injection_guard, url_ssrf_guard
 
 SCOPE_INSTRUCTION = """\
-You define the research scope for a computational-biology paper review tailored to
+You define the research scope for a __DOMAIN_ADJ__ paper review tailored to
 one researcher.
 
 The user's message may contain ANY combination of:
@@ -66,7 +67,7 @@ scope_agent = Agent(
     name="scope_agent",
     model=build_model(),
     description="Derives up to 5 subfield clusters from a CV URL and/or free-text research topics; asks for input if given neither.",
-    instruction=SCOPE_INSTRUCTION,
+    instruction=SCOPE_INSTRUCTION.replace("__DOMAIN_ADJ__", get_domain().adjective),
     tools=[load_web_page],
     output_key="scope",
     generate_content_config=safety_config(),
