@@ -43,14 +43,13 @@ from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai import types  # noqa: E402
 
 from app.agent import root_agent  # noqa: E402
-from app.domain import get_domain  # noqa: E402
 
 HTML_PATH = Path.cwd() / "literature-reviewer.html"
 
 
 def _prompt_inputs() -> str:
     """Ask the user for a CV URL and/or topics; loop until something is given."""
-    heading = f"Recent {get_domain().name} Review Queue"
+    heading = "Recent Literature Review Queue"
     print("\n" + heading)
     print("=" * len(heading))
     print("Provide a CV/website URL, some research topics, or both.\n")
@@ -111,7 +110,7 @@ def _run_remote(message: str, url: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description=f"Generate a {get_domain().adjective} paper review."
+        description="Generate a paper review of recent literature."
     )
     ap.add_argument(
         "prompt",

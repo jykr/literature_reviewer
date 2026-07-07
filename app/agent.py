@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Root agent for the recent paper Review Queue (domain set via app/domain.py).
+"""Root agent for the recent-literature Review Queue.
 
 Pipeline (SPEC §2), as a linear SequentialAgent:
 
@@ -32,15 +32,14 @@ from google.adk.agents import SequentialAgent
 from google.adk.apps import App
 
 from app.analysis import rank_agent
-from app.domain import get_domain
 from app.research import research_fanout
 from app.scope import scope_agent
 
 root_agent = SequentialAgent(
     name="root_agent",
     description=(
-        f"Given a researcher's CV URL, researches recent {get_domain().adjective} "
-        "papers, ranks them by relevance, and renders a self-contained review app."
+        "Given a researcher's CV URL, researches recent papers, ranks them by "
+        "relevance, and renders a self-contained review app."
     ),
     sub_agents=[scope_agent, research_fanout, rank_agent],
 )

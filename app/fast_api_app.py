@@ -30,8 +30,8 @@ from google.adk.runners import Runner
 from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 
-# Load .env BEFORE importing app modules: several resolve config (REVIEW_MODEL,
-# REVIEW_DOMAIN_*) at import time, so the environment must be populated first.
+# Load .env BEFORE importing app modules: some resolve config (e.g. REVIEW_MODEL)
+# at import time, so the environment must be populated first.
 load_dotenv()
 
 from app import byo_review  # noqa: E402

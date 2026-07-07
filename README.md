@@ -2,7 +2,7 @@
 
 [![Server status](https://img.shields.io/website?url=https%3A%2F%2Fliterature-reviewer-4055136070.us-central1.run.app%2Fhealth&up_message=online&down_message=offline&label=server)](https://literature-reviewer-4055136070.us-central1.run.app/reviewer)
 
-Literature review is often a daunting task. This concierge agent runs as a hosted web app on **Google Cloud Run** — point it at your field of interest (a CV, a seed paper, or a few keywords) and it returns a single ranked, structured review of the last ~12 months of papers in that field (computational biology by default; retarget any field via a [config knob](#domain-agnostic-by-design)). The public server generates reviews on **your own API key**, used per-request and never stored.
+Literature review is often a daunting task. This concierge agent runs as a hosted web app on **Google Cloud Run** — point it at your field of interest (a CV, a seed paper, or a few keywords) and it returns a single ranked, structured review of the last ~12 months of papers in that field. It works for any field — the pipeline adapts to whatever you point it at. The public server generates reviews on **your own API key**, used per-request and never stored.
 
 **Live server:** https://literature-reviewer-4055136070.us-central1.run.app/reviewer
 
@@ -55,17 +55,6 @@ uv run uvicorn app.fast_api_app:app --host 0.0.0.0 --port 8080
 
 On Cloud Run the credentials come from the service account automatically. `agents-cli deploy` (from the [Agents CLI](https://github.com/google/agents-cli): `uv tool install google-agents-cli`) builds the same container and ships it to **Google Cloud Run**. Infrastructure is Terraform under [`deployment/terraform/`](deployment/terraform/). See [`paper-review-SPEC.md`](paper-review-SPEC.md) for the full specification of the generated review app.
 
-## Domain-agnostic by design
-
-Computational biology is the **default demo**, not a hard-coded limit. The
-pipeline is field-agnostic — scope, search, and ranking all derive from your own
-CV/keywords, and the only search filter is a publication date. The field-specific
-*framing* (prompts, page title, the per-paper "domain question" label, the
-`localStorage` namespace) lives in one config knob, [`app/domain.py`](app/domain.py),
-mirroring `REVIEW_MODEL`. Retarget the app by setting `REVIEW_DOMAIN_NAME` (and
-usually `REVIEW_DOMAIN_QUESTION_LABEL`) in `.env` — e.g. `Materials Science`,
-`Macroeconomics`, `Climate Science`. Leave them unset for the compbio demo.
-
 ## Model-agnostic by design
 
 Model choice is a **config knob** (`REVIEW_MODEL`), never chat input. A bare Gemini id runs ADK-native; a LiteLLM `provider/model` id (e.g. `anthropic/claude-sonnet-5`, `openai/gpt-4o`) routes through LiteLLM. The hosted BYO-key server supports Gemini, Anthropic, and OpenAI behind one `call_llm`, with loose/repairing JSON parsing so a truncated or fenced response still yields a valid review. Because search runs on keyless tools rather than provider-specific grounding, swapping models changes nothing downstream.
@@ -75,3 +64,15 @@ Model choice is a **config knob** (`REVIEW_MODEL`), never chat input. A bare Gem
 ![1783389818754](image/README/1783389818754.png)
 
 Generated with `agents-cli playground`. `root-agent` sequentially runs `scope_agent`, `research_fanout`, and `rank_agent`.
+
+## Contributing
+
+Contributions are welcome — bug reports, features, documentation, and new-domain
+profiles alike.
+
+- **Issues** — report bugs or request features via [GitHub Issues](https://github.com/jykr/literature_reviewer_agent/issues). Include repro steps: inputs, model, and expected vs. actual behavior.
+- **Pull requests** — fork, branch, and open a PR. Keep changes focused, run `uv run pytest tests/unit tests/integration` before submitting, and explain the rationale alongside the change.
+- **Search sources** — the app works for any field out of the box; adding or tuning scholarly search adapters ([app/search_tools.py](app/search_tools.py)) to improve coverage in a given field is among the most useful contributions.
+- **Ideas & feedback** — open a [Discussion](https://github.com/jykr/literature_reviewer_agent/discussions) or an issue to propose a direction before implementing.
+
+By contributing, you agree your work is licensed under the same terms as this project.

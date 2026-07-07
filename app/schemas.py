@@ -24,8 +24,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.domain import get_domain
-
 
 class Cluster(BaseModel):
     """A subfield the researcher works in, used to fan out research (§2.2)."""
@@ -57,7 +55,7 @@ class Approach(BaseModel):
     aim: str = Field(description="Goal + the limitation it addresses.")
     data: str = Field(description="What data the model consumes (train + eval, scale).")
     model: str = Field(description="The model/algorithm: if novel, how; else what was done.")
-    question: str = Field(description=get_domain().question_desc)
+    question: str = Field(description="The key question the paper addresses.")
 
 
 class Tags(BaseModel):

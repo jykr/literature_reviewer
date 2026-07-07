@@ -24,22 +24,11 @@ that implements the render + interaction contract (§4-§9).
 from __future__ import annotations
 
 import json
-import re
 
 from google.adk.agents.callback_context import CallbackContext
 from google.genai import types as genai_types
 
-from app.domain import get_domain
 from app.schemas import ReviewQueue
-
-
-def _slugify_for_js(slug: str) -> str:
-    """Sanitise the domain slug for a JS string / localStorage key.
-
-    Config, not user input, but keep it to a safe key charset so a stray value
-    can't break out of the single-quoted ``STORE``/``ISTORE`` literals.
-    """
-    return re.sub(r"[^A-Za-z0-9_-]+", "", slug) or "review"
 
 
 # Category chip palette (SPEC §3d/§8): cycled per cluster index.
@@ -145,7 +134,6 @@ def build_html(
     payload = build_payload(
         queue, profile=profile, generated=generated, categories=categories
     )
-    d = get_domain()
     return (
         _TEMPLATE.replace("__DATA__", _json_for_script(payload["data"]))
         .replace("__TAGS__", _json_for_script(payload["tags"]))
@@ -154,12 +142,6 @@ def build_html(
         .replace("__INPUTS__", _json_for_script(inputs or []))
         .replace("__PROFILE__", _esc(profile))
         .replace("__GENERATED__", _esc(generated))
-        # Domain framing (config, not user input): title, storage namespace, and
-        # the per-paper "domain question" label. See app/domain.py.
-        .replace("__DOMAIN_NAME__", _esc(d.name))
-        .replace("__DOMAIN_ADJ__", _esc(d.adjective))
-        .replace("__DOMAIN_SLUG__", _slugify_for_js(d.slug))
-        .replace("__QUESTION_LABEL__", _esc(d.question_label))
     )
 
 
@@ -269,7 +251,7 @@ _TEMPLATE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recent __DOMAIN_NAME__ Review Queue</title>
+<title>Recent Literature Review Queue</title>
 <style>
 :root{
   --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --muted:#5b6570; --line:#e3e7ec;
@@ -384,7 +366,7 @@ dl dd ul{margin:4px 0;padding-left:18px}
 </head>
 <body>
 <header class="top">
-  <h1>Recent __DOMAIN_NAME__ Review Queue</h1>
+  <h1>Recent Literature Review Queue</h1>
   <p class="sub">Ranked, taggable triage of recent papers &mdash; tailored to: <em>__PROFILE__</em></p>
   <p class="crit">Ranked by a blend of field impact, relevance to your work, and author/venue
     credibility. Scores are editorial judgments, not computed. Tag papers and copy clean notes
@@ -461,13 +443,13 @@ function hydrate(){
 hydrate();
 
 const EVAL_LABELS = ['New metric:','New eval data:','Design & novelty:','Eval limits:'];
-const STORE = '__DOMAIN_SLUG__-review-status-v1';
+const STORE = 'litreview-status-v1';
 let status = {};
 try { status = JSON.parse(localStorage.getItem(STORE)) || {}; } catch(e){ status = {}; }
 function saveStatus(){ localStorage.setItem(STORE, JSON.stringify(status)); }
 
 // ----- Interests (SPEC §2.0/§3d): INPUTS persisted; edited then regenerated -----
-const ISTORE = '__DOMAIN_SLUG__-review-inputs-v1';
+const ISTORE = 'litreview-inputs-v1';
 let iseq = 0;
 function ensureIds(){ INPUTS.forEach(i => { if(i.id==null) i.id = 'i'+(++iseq); }); }
 let INPUTS;
@@ -520,7 +502,7 @@ function approachDD(p){
     + `<ul>`
     + (a.data ? `<li><b>Data:</b> ${esc(a.data)}</li>`:'')
     + (a.model ? `<li><b>Model:</b> ${esc(a.model)}</li>`:'')
-    + (a.question ? `<li><b>__QUESTION_LABEL__:</b> ${esc(a.question)}</li>`:'')
+    + (a.question ? `<li><b>Key question:</b> ${esc(a.question)}</li>`:'')
     + `</ul>`;
 }
 function evalDD(p){
@@ -632,7 +614,7 @@ function oneNoteHTML(p){
   const bul = [];
   if(a.data) bul.push(`<li><b>Data:</b> ${esc(a.data)}</li>`);
   if(a.model) bul.push(`<li><b>Model:</b> ${esc(a.model)}</li>`);
-  if(a.question) bul.push(`<li><b>__QUESTION_LABEL__:</b> ${esc(a.question)}</li>`);
+  if(a.question) bul.push(`<li><b>Key question:</b> ${esc(a.question)}</li>`);
   const resItems = (p.results||[]).filter(x=>x!=null && String(x).trim())
     .map(x=>`<li>${esc(x)}</li>`).join('');
   return `<div style="font-family:Calibri,sans-serif">
@@ -708,7 +690,7 @@ document.getElementById('tagfilter').addEventListener('click', e=>{
 });
 document.getElementById('copyview').addEventListener('click', ()=>{
   const rows = currentView();
-  const html = `<div style="font-family:Calibri,sans-serif"><h1>__DOMAIN_NAME__ Review Queue (${rows.length} papers)</h1>`
+  const html = `<div style="font-family:Calibri,sans-serif"><h1>Literature Review Queue (${rows.length} papers)</h1>`
     + rows.map(oneNoteHTML).join('<hr>') + '</div>';
   copyHTML(html, `Copied ${rows.length} papers for OneNote`);
 });
@@ -766,7 +748,7 @@ function offlineFallback(){
   // No live backend (opened via file://, or server down): fall back to a
   // prompt the user can paste into the agent chat (Plan A behaviour).
   const lines = INPUTS.map(i=>`- ${IKIND_LABEL[i.kind]||i.kind}: ${i.value}`);
-  const prompt = 'Build my recent __DOMAIN_ADJ__ review from these interest inputs:\n'
+  const prompt = 'Build my recent literature review from these interest inputs:\n'
     + lines.join('\n');
   copyText(prompt, 'No live backend — prompt copied to clipboard');
   setStatus('No live backend reachable. Copied a prompt to paste into the agent chat.');

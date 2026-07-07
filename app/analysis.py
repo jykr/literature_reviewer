@@ -22,13 +22,12 @@ the fan-out. Its ``after_agent_callback`` renders the HTML app.
 
 from google.adk.agents import Agent
 
-from app.domain import get_domain
 from app.models import build_model
 from app.render import assemble_html_callback
 from app.schemas import ReviewQueue
 
 RANK_INSTRUCTION = """\
-You are the editor of a __DOMAIN_ADJ__ paper review tailored to one
+You are the editor of a paper review tailored to one
 researcher.
 
 Researcher profile and scope (JSON):
@@ -83,7 +82,7 @@ rank_agent = Agent(
     name="rank_agent",
     model=build_model(),
     description="Merges, deepens, and ranks candidate papers into the final ReviewQueue.",
-    instruction=RANK_INSTRUCTION.replace("__DOMAIN_ADJ__", get_domain().adjective),
+    instruction=RANK_INSTRUCTION,
     output_schema=ReviewQueue,
     output_key="review_queue",
     after_agent_callback=assemble_html_callback,
